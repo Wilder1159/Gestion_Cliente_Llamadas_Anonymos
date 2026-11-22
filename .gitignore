@@ -1,0 +1,27 @@
+# Credenciales de Twilio
+.env
+.env.*
+
+# Archivos de configuración privada
+secrets.properties
+twilio.properties
+config/local.properties
+
+# Archivos compilados
+*.class
+/build/
+
+.env
+.env.*
+!.env.example
+/target/
+/dist/
+
+# Configuración local de NetBeans
+/nbproject/private/
+
+# Archivos temporales
+*.log
+
+#BLOQUEAR LA BASE DE DATOS
+test/dto/db/db_ClienteTelefonia.sql
