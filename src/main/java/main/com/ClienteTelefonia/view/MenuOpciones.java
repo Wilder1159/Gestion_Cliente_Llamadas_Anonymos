@@ -116,7 +116,7 @@ public class MenuOpciones extends javax.swing.JFrame {
 
         menuOperaciones.setText("Operaciones");
 
-        itemConsumo.setText("Consumo");
+        itemConsumo.setText("Llamar");
         itemConsumo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 itemConsumoActionPerformed(evt);
