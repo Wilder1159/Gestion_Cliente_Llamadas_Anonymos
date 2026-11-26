@@ -11,7 +11,7 @@ insuficiente. Si la opción elegida es ‘F’ (Fin), se deben mostrar los sigui
 • Saldo final.
 • Número de recargas realizadas en efectivo y con tarjeta.
 • Número total de consumos efectuados.
-
+    
 
 
 

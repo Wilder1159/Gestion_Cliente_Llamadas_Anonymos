@@ -1,0 +1,48 @@
+//probar el ciclo completo de autenticación
+$body = @{
+    username = "username"
+    password = Read-Host "Ingresa tu contraseña"
+} | ConvertTo-Json
+
+# LOGIN
+$login = Invoke-RestMethod `
+    -Method POST `
+    -Uri "http://localhost:8081/api/auth/login" `
+    -ContentType "application/json" `
+    -Body $body
+
+$token = $login.token
+
+Write-Host "`nLOGIN:"
+$login | Select-Object autenticado, username, rol, expiraEn
+
+# CONSULTAR SESIÓN
+$headers = @{
+    Authorization = "Bearer $token"
+}
+
+Write-Host "`nCONSULTA DE SESIÓN:"
+
+Invoke-RestMethod `
+    -Uri "http://localhost:8081/api/auth/me" `
+    -Headers $headers
+
+# CERRAR SESIÓN
+Write-Host "`nLOGOUT:"
+
+Invoke-RestMethod `
+    -Method POST `
+    -Uri "http://localhost:8081/api/auth/logout" `
+    -Headers $headers
+
+# INTENTAR REUTILIZAR EL TOKEN
+Write-Host "`nVERIFICACIÓN DE TOKEN REVOCADO:"
+
+try {
+    Invoke-RestMethod `
+        -Uri "http://localhost:8081/api/auth/me" `
+        -Headers $headers
+}
+catch {
+    Write-Host "Código HTTP:" $_.Exception.Response.StatusCode.value__
+}
