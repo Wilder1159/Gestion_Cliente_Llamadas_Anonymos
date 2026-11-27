@@ -6,12 +6,20 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.concurrent.Executors;
 
+import main.com.ClienteTelefonia.dao.LlamadaDAO;
+import main.com.ClienteTelefonia.dto.EnvDTO;
+import main.com.ClienteTelefonia.server.controller.LlamadaController;
+import main.com.ClienteTelefonia.server.controller.TelnyxWebhookController;
 import main.com.ClienteTelefonia.server.controller.AuthController;
 import main.com.ClienteTelefonia.server.security.AuthGuard;
 import main.com.ClienteTelefonia.server.security.AuthSessionService;
 import main.com.ClienteTelefonia.server.security.Permiso;
+import main.com.ClienteTelefonia.server.security.TelnyxWebhookVerifier;
+import main.com.ClienteTelefonia.service.LlamadaManager;
+import main.com.ClienteTelefonia.service.TelnyxLlamadaService;
 
 public class ServidorApplication {
 
@@ -36,6 +44,21 @@ public class ServidorApplication {
             // 3. Inicializar protección RBAC. ROLE-BASAD ACCESS CONTROL.
             AuthGuard authGuard =
                     new AuthGuard(sessionService);
+
+            LlamadaDAO llamadaDAO = new LlamadaDAO();
+            LlamadaManager llamadaManager = new LlamadaManager(
+                    llamadaDAO,
+                    new TelnyxLlamadaService()
+            );
+            LlamadaController llamadaController =
+                    new LlamadaController(llamadaManager);
+            TelnyxWebhookController webhookController =
+                    new TelnyxWebhookController(
+                            llamadaDAO,
+                            new TelnyxWebhookVerifier(
+                                    EnvDTO.obtener("TELNYX_PUBLIC_KEY")
+                            )
+                    );
 
             // 4. Endpoint público: Health.
             servidor.createContext("/api/health", exchange -> {
@@ -154,6 +177,44 @@ public class ServidorApplication {
                     )
             );
 
+            // Endpoints protegidos: la cuenta se obtiene de la sesión.
+            servidor.createContext("/api/llamadas", exchange -> {
+                if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                    authGuard.proteger(
+                            "/api/llamadas",
+                            "GET",
+                            Permiso.LLAMADA_VER_REGISTROS_PROPIOS,
+                            llamadaController::listar
+                    ).handle(exchange);
+                } else if ("POST".equalsIgnoreCase(
+                        exchange.getRequestMethod())) {
+                    authGuard.proteger(
+                            "/api/llamadas",
+                            "POST",
+                            Permiso.LLAMADA_INICIAR_PROPIA,
+                            llamadaController::iniciar
+                    ).handle(exchange);
+                } else {
+                    llamadaController.manejarColeccion(exchange);
+                }
+            });
+
+            servidor.createContext(
+                    "/api/llamadas/finalizar",
+                    authGuard.proteger(
+                            "/api/llamadas/finalizar",
+                            "POST",
+                            Permiso.LLAMADA_INICIAR_PROPIA,
+                            llamadaController::finalizar
+                    )
+            );
+
+            // Endpoint público autenticado criptográficamente por Telnyx.
+            servidor.createContext(
+                    "/api/telnyx/webhook",
+                    webhookController::recibir
+            );
+
             // 8. Configurar la ejecución.
             servidor.setExecutor(
                     Executors.newFixedThreadPool(10)
@@ -179,12 +240,20 @@ public class ServidorApplication {
             System.out.println(
                     "Logout: POST http://localhost:8081/api/auth/logout"
             );
+            System.out.println(
+                    "Llamadas: http://localhost:8081/api/llamadas"
+            );
             System.out.println("--------------------------------");
 
         } catch (IOException e) {
 
             System.err.println(
                     "No se pudo iniciar el servidor: "
+                    + e.getMessage()
+            );
+        } catch (SQLException | RuntimeException e) {
+            System.err.println(
+                    "No se pudo configurar el servidor: "
                     + e.getMessage()
             );
         }

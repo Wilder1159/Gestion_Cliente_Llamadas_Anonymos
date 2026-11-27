@@ -3,6 +3,7 @@ package main.com.ClienteTelefonia.view;
 
 import main.com.ClienteTelefonia.controller.ClienteTelefoniaController;
 import main.com.ClienteTelefonia.controller.LoginController;
+import main.com.ClienteTelefonia.view.JRecarga;
 
 
 public class MenuOpciones extends javax.swing.JFrame {
@@ -34,6 +35,7 @@ public class MenuOpciones extends javax.swing.JFrame {
             this.controller = controller;
             this.rolUsuario = rolUsuario;
             configurarMenuPorRol();
+            
         }
         
         
@@ -54,6 +56,7 @@ public class MenuOpciones extends javax.swing.JFrame {
         lblCom2 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
+        scrolPanel = new javax.swing.JScrollPane();
         lblMenuPrincipal = new javax.swing.JMenuBar();
         menuInicio = new javax.swing.JMenu();
         itemSalir = new javax.swing.JMenuItem();
@@ -140,20 +143,23 @@ public class MenuOpciones extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(scrolPanel)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap(22, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(lblCom1, javax.swing.GroupLayout.PREFERRED_SIZE, 284, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(19, 19, 19))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(lblCom2)
-                        .addGap(67, 67, 67))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(186, 186, 186)
+                        .addComponent(lblCom1, javax.swing.GroupLayout.PREFERRED_SIZE, 284, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(224, 224, 224)
+                        .addComponent(lblCom2)))
+                .addContainerGap(223, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(322, Short.MAX_VALUE)
+                .addContainerGap()
+                .addComponent(scrolPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 518, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(lblCom1, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(lblCom2)
@@ -165,11 +171,25 @@ public class MenuOpciones extends javax.swing.JFrame {
 
     private void itemSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemSalirActionPerformed
         //para salir del programa en el btn de cerra sesion 
+        try {
+            if (controller != null) {
+                controller.cerrarSesion();
+            }
+        } catch (java.sql.SQLException e) {
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "No se pudo cerrar la sesión en el servidor.\n"
+                    + e.getMessage(),
+                    "Error de sesión",
+                    javax.swing.JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
         LoginController loginController = new LoginController();
         
         JLogin login = new JLogin(loginController);
         login.setVisible(true);
-        this.dispose();
+        
         
     }//GEN-LAST:event_itemSalirActionPerformed
 
@@ -181,8 +201,8 @@ public class MenuOpciones extends javax.swing.JFrame {
         } 
         //esta ob se trata al momento de dar click al consumo, nos da a la ventana de consumo
         JConsumo viewConsumo = new JConsumo(controller);
-        viewConsumo.setVisible(true);
-        this.dispose();
+        viewConsumo.setVisible(false);
+        
     }//GEN-LAST:event_itemConsumoActionPerformed
 
     private void itemReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemReporteActionPerformed
@@ -193,7 +213,7 @@ public class MenuOpciones extends javax.swing.JFrame {
         }
         JReporte reporte = new JReporte(controller);
         reporte.setVisible(true);
-        this.dispose();
+        
     }//GEN-LAST:event_itemReporteActionPerformed
 
     private void menuRecargaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuRecargaActionPerformed
@@ -206,14 +226,14 @@ public class MenuOpciones extends javax.swing.JFrame {
         //aca ingresa el objeto para abrir la ventana
         JRecarga viewRecarga = new JRecarga(controller);
         viewRecarga.setVisible(true);
-        this.dispose();
+        
     }//GEN-LAST:event_menuRecargaActionPerformed
 
     private void cbmoGestionClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbmoGestionClientesActionPerformed
         //AQUI SE LLAMA EL OBJETO
         JGestionClientes viewGestion = new JGestionClientes(controller);
         viewGestion.setVisible(true);
-        this.dispose();
+        
     }//GEN-LAST:event_cbmoGestionClientesActionPerformed
  
 
@@ -231,5 +251,6 @@ public class MenuOpciones extends javax.swing.JFrame {
     private javax.swing.JMenu menuInicio;
     private javax.swing.JMenu menuOperaciones;
     private javax.swing.JMenuItem menuRecarga;
+    private javax.swing.JScrollPane scrolPanel;
     // End of variables declaration//GEN-END:variables
 }

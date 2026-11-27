@@ -13,7 +13,6 @@ config/local.properties
 
 .env
 .env.*
-!.env.example
 /target/
 /dist/
 

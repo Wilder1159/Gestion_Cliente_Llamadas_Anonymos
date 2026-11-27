@@ -6,9 +6,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 import main.com.ClienteTelefonia.dto.DatabaseDTO;
 import main.com.ClienteTelefonia.model.ClienteTelefonia;
+import main.com.ClienteTelefonia.service.CalculoRecargaSimulada;
+import main.com.ClienteTelefonia.service.CalculoRecargaSimulada.Importes;
 
 public class ClienteDAO {
 
@@ -298,205 +302,108 @@ public class ClienteDAO {
 
 
 
-    //nuevo metodo para el registro de recarga por YAPE
+    // Conserva la firma utilizada por las ventanas y llamadas existentes.
     public double registrarRecargaYape(long idCliente, double monto)
             throws SQLException {
+        return registrarRecargaYape(
+                idCliente,
+                BigDecimal.valueOf(monto),
+                UUID.randomUUID()
+        ).doubleValue();
+    }
 
+    public BigDecimal registrarRecargaYape(
+            long idCliente,
+            BigDecimal monto,
+            UUID claveIdempotencia
+    ) throws SQLException {
+        return registrarRecargaSimulada(
+                idCliente,
+                CalculoRecargaSimulada.yape(monto),
+                "YAPE",
+                claveIdempotencia
+        );
+    }
+
+    // Conserva la firma utilizada por las ventanas y llamadas existentes.
+    public double registrarRecargaTarjeta(long idCliente, double monto)
+            throws SQLException {
+        return registrarRecargaTarjeta(
+                idCliente,
+                BigDecimal.valueOf(monto),
+                UUID.randomUUID()
+        ).doubleValue();
+    }
+
+    public BigDecimal registrarRecargaTarjeta(
+            long idCliente,
+            BigDecimal monto,
+            UUID claveIdempotencia
+    ) throws SQLException {
+        return registrarRecargaSimulada(
+                idCliente,
+                CalculoRecargaSimulada.tarjeta(monto),
+                "TARJETA",
+                claveIdempotencia
+        );
+    }
+
+    private BigDecimal registrarRecargaSimulada(
+            long idCliente,
+            Importes importes,
+            String metodo,
+            UUID claveIdempotencia
+    ) throws SQLException {
         if (idCliente <= 0) {
             throw new IllegalArgumentException("El cliente no es válido.");
         }
-
-        if (!Double.isFinite(monto) || monto <= 0) {
+        if (claveIdempotencia == null) {
             throw new IllegalArgumentException(
-                "El monto debe ser mayor que cero."
+                    "La clave de idempotencia es obligatoria."
             );
         }
 
-        // Trabajamos con dos decimales para importes monetarios.
-        java.math.BigDecimal importe =
-            java.math.BigDecimal.valueOf(monto)
-                .setScale(2, java.math.RoundingMode.HALF_UP);
+        String referencia = "SIMULADA:" + claveIdempotencia;
 
-        Connection cn = null;
-
-        try {
-            cn = DatabaseDTO.getConnection();
-            cn.setAutoCommit(false);
-
-            long idCuenta;
-            java.math.BigDecimal saldoAnterior;
-            String estadoCuenta;
-
-            // Bloquea la fila de la cuenta durante la transacción.
-            String sqlCuenta =
-                "SELECT c.id_cuenta, c.saldo, c.estado " +
-                "FROM dbo.Cuenta c WITH (UPDLOCK, ROWLOCK) " +
-                "INNER JOIN dbo.Cliente cl " +
-                "ON cl.id_cliente = c.id_cliente " +
-                "WHERE c.id_cliente = ? AND cl.estado = 'ACTIVO'";
-
-            try (PreparedStatement ps = cn.prepareStatement(sqlCuenta)) {
-                ps.setLong(1, idCliente);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        throw new SQLException(
-                            "No se encontró una cuenta para el cliente activo."
-                        );
-                    }
-
-                    idCuenta = rs.getLong("id_cuenta");
-                    saldoAnterior = rs.getBigDecimal("saldo");
-                    estadoCuenta = rs.getString("estado");
-                }
-            }
-
-            if (!"ACTIVA".equalsIgnoreCase(estadoCuenta)) {
-                throw new SQLException("La cuenta no está activa.");
-            }
-
-            java.math.BigDecimal saldoNuevo =
-                saldoAnterior.add(importe)
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
-
-            // 1. Registrar la recarga confirmada manualmente.
-            long idRecarga;
-            String sqlRecarga =
-                "INSERT INTO dbo.Recarga " +
-                "(id_cuenta, monto, metodo, estado, fecha_confirmacion) " +
-                "OUTPUT INSERTED.id_recarga " +
-                "VALUES (?, ?, 'YAPE', 'CONFIRMADA', SYSDATETIME())";
-
-            try (PreparedStatement ps = cn.prepareStatement(sqlRecarga)) {
-                ps.setLong(1, idCuenta);
-                ps.setBigDecimal(2, importe);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        throw new SQLException(
-                            "No se pudo obtener el ID de la recarga."
-                        );
-                    }
-                    idRecarga = rs.getLong(1);
-                }
-            }
-
-            // 2. Actualizar el saldo, sin comisión.
-            String sqlActualizar =
-                "UPDATE dbo.Cuenta " +
-                "SET saldo = ? " +
-                "WHERE id_cuenta = ? AND estado = 'ACTIVA'";
-
-            try (PreparedStatement ps = cn.prepareStatement(sqlActualizar)) {
-                ps.setBigDecimal(1, saldoNuevo);
-                ps.setLong(2, idCuenta);
-
-                if (ps.executeUpdate() != 1) {
-                    throw new SQLException(
-                        "No se pudo actualizar el saldo de la cuenta."
-                    );
-                }
-            }
-
-            // 3. Registrar el movimiento contable.
-            String sqlMovimiento =
-                "INSERT INTO dbo.MovimientoSaldo " +
-                "(id_cuenta, id_recarga, tipo, monto, " +
-                "saldo_anterior, saldo_posterior, descripcion) " +
-                "VALUES (?, ?, 'RECARGA', ?, ?, ?, ?)";
-
-            try (PreparedStatement ps = cn.prepareStatement(sqlMovimiento)) {
-                ps.setLong(1, idCuenta);
-                ps.setLong(2, idRecarga);
-                ps.setBigDecimal(3, importe);
-                ps.setBigDecimal(4, saldoAnterior);
-                ps.setBigDecimal(5, saldoNuevo);
-                ps.setString(6, "Recarga Yape confirmada manualmente");
-                ps.executeUpdate();
-            }
-
-            // Los tres cambios se confirman juntos.
-            cn.commit();
-
-            return saldoNuevo.doubleValue();
-
-        } catch (SQLException | RuntimeException ex) {
-            if (cn != null) {
-                try {
-                    cn.rollback();
-                } catch (SQLException rollbackEx) {
-                    ex.addSuppressed(rollbackEx);
-                }
-            }
-            throw ex;
-
-        } finally {
-            if (cn != null) {
-                try {
-                    cn.setAutoCommit(true);
-                    cn.close();
-                } catch (SQLException ex) {
-                    // No ocultar el resultado de la transacción
-                    // por un error al restaurar/cerrar la conexión.
-                }
-            }
-        }
-    }
-
-    //metodo nuevo: registro de pago por TARJETA, SEA CREDITO O DEBITO
-        public double registrarRecargaTarjeta(long idCliente, double monto)
-                throws SQLException {
-
-            if (idCliente <= 0) {
-                throw new IllegalArgumentException("El cliente no es válido.");
-            }
-
-            if (!Double.isFinite(monto) || monto <= 0) {
-                throw new IllegalArgumentException(
-                    "El monto debe ser mayor que cero."
-                );
-            }
-
-            java.math.BigDecimal importe =
-                java.math.BigDecimal.valueOf(monto)
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
-
-            java.math.BigDecimal tasaComision =
-                new java.math.BigDecimal("0.02");
-
-            java.math.BigDecimal importeNeto =
-                importe.multiply(java.math.BigDecimal.ONE.subtract(tasaComision))
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
-
-            java.math.BigDecimal comision = importe.subtract(importeNeto);
-
-            Connection cn = null;
+        try (Connection conexion = DatabaseDTO.getConnection()) {
+            conexion.setAutoCommit(false);
 
             try {
-                cn = DatabaseDTO.getConnection();
-                cn.setAutoCommit(false);
+                BigDecimal saldoExistente = buscarRecargaExistente(
+                        conexion,
+                        idCliente,
+                        metodo,
+                        importes,
+                        referencia
+                );
+                if (saldoExistente != null) {
+                    conexion.commit();
+                    return saldoExistente;
+                }
 
                 long idCuenta;
-                java.math.BigDecimal saldoAnterior;
+                BigDecimal saldoAnterior;
                 String estadoCuenta;
 
-                String sqlCuenta =
-                    "SELECT c.id_cuenta, c.saldo, c.estado " +
-                    "FROM dbo.Cuenta c WITH (UPDLOCK, ROWLOCK) " +
-                    "INNER JOIN dbo.Cliente cl " +
-                    "ON cl.id_cliente = c.id_cliente " +
-                    "WHERE c.id_cliente = ? AND cl.estado = 'ACTIVO'";
+                String sqlCuenta = """
+                    SELECT c.id_cuenta, c.saldo, c.estado
+                    FROM dbo.Cuenta AS c WITH (UPDLOCK, ROWLOCK)
+                    INNER JOIN dbo.Cliente AS cl
+                        ON cl.id_cliente = c.id_cliente
+                    WHERE c.id_cliente = ? AND cl.estado = 'ACTIVO'
+                    """;
 
-                try (PreparedStatement ps = cn.prepareStatement(sqlCuenta)) {
+                try (PreparedStatement ps =
+                             conexion.prepareStatement(sqlCuenta)) {
                     ps.setLong(1, idCliente);
 
                     try (ResultSet rs = ps.executeQuery()) {
                         if (!rs.next()) {
                             throw new SQLException(
-                                "No se encontró una cuenta para el cliente activo."
+                                    "No se encontró una cuenta para el "
+                                    + "cliente activo."
                             );
                         }
-
                         idCuenta = rs.getLong("id_cuenta");
                         saldoAnterior = rs.getBigDecimal("saldo");
                         estadoCuenta = rs.getString("estado");
@@ -507,96 +414,166 @@ public class ClienteDAO {
                     throw new SQLException("La cuenta no está activa.");
                 }
 
-                java.math.BigDecimal saldoNuevo =
-                    saldoAnterior.add(importeNeto)
+                BigDecimal saldoNuevo = saldoAnterior
+                        .add(importes.montoAcreditado())
                         .setScale(2, java.math.RoundingMode.HALF_UP);
-
-                // Guardar el monto bruto de la recarga.
-                String sqlRecarga =
-                    "INSERT INTO dbo.Recarga " +
-                    "(id_cuenta, monto, metodo, estado, fecha_confirmacion) " +
-                    "OUTPUT INSERTED.id_recarga " +
-                    "VALUES (?, ?, 'TARJETA', 'CONFIRMADA', SYSDATETIME())";
+                if (saldoNuevo.compareTo(
+                        new BigDecimal("9999999999.99")) > 0) {
+                    throw new IllegalArgumentException(
+                            "El saldo supera el máximo permitido."
+                    );
+                }
 
                 long idRecarga;
+                String sqlRecarga = """
+                    INSERT INTO dbo.Recarga
+                        (id_cuenta, monto, monto_comision,
+                         monto_acreditado, es_simulada, metodo, estado,
+                         referencia, fecha_confirmacion)
+                    OUTPUT INSERTED.id_recarga
+                    VALUES (?, ?, ?, ?, 1, ?, 'CONFIRMADA', ?,
+                            SYSDATETIME())
+                    """;
 
-                try (PreparedStatement ps = cn.prepareStatement(sqlRecarga)) {
+                try (PreparedStatement ps =
+                             conexion.prepareStatement(sqlRecarga)) {
                     ps.setLong(1, idCuenta);
-                    ps.setBigDecimal(2, importe);
+                    ps.setBigDecimal(2, importes.montoBruto());
+                    ps.setBigDecimal(3, importes.comision());
+                    ps.setBigDecimal(4, importes.montoAcreditado());
+                    ps.setString(5, metodo);
+                    ps.setString(6, referencia);
 
                     try (ResultSet rs = ps.executeQuery()) {
                         if (!rs.next()) {
                             throw new SQLException(
-                                "No se pudo obtener el ID de la recarga."
+                                    "No se pudo obtener el ID de la recarga."
                             );
                         }
                         idRecarga = rs.getLong(1);
                     }
                 }
 
-                // Acreditar el importe neto.
-                String sqlActualizar =
-                    "UPDATE dbo.Cuenta SET saldo = ? " +
-                    "WHERE id_cuenta = ? AND estado = 'ACTIVA'";
-
-                try (PreparedStatement ps = cn.prepareStatement(sqlActualizar)) {
+                String sqlActualizar = """
+                    UPDATE dbo.Cuenta
+                    SET saldo = ?
+                    WHERE id_cuenta = ? AND estado = 'ACTIVA'
+                    """;
+                try (PreparedStatement ps =
+                             conexion.prepareStatement(sqlActualizar)) {
                     ps.setBigDecimal(1, saldoNuevo);
                     ps.setLong(2, idCuenta);
-
                     if (ps.executeUpdate() != 1) {
                         throw new SQLException(
-                            "No se pudo actualizar el saldo de la cuenta."
+                                "No se pudo actualizar el saldo de la cuenta."
                         );
                     }
                 }
 
-                // Registrar el importe neto y documentar la comisión.
-                String sqlMovimiento =
-                    "INSERT INTO dbo.MovimientoSaldo " +
-                    "(id_cuenta, id_recarga, tipo, monto, " +
-                    "saldo_anterior, saldo_posterior, descripcion) " +
-                    "VALUES (?, ?, 'RECARGA', ?, ?, ?, ?)";
-
                 String descripcion =
-                    "Recarga con tarjeta confirmada manualmente. " +
-                    "Monto bruto: S/ " + importe.toPlainString() +
-                    "; comisión 2%: S/ " + comision.toPlainString() +
-                    "; monto acreditado: S/ " + importeNeto.toPlainString();
-
-                try (PreparedStatement ps = cn.prepareStatement(sqlMovimiento)) {
+                        "Recarga SIMULADA académica " + metodo
+                        + ". Bruto PEN " + importes.montoBruto().toPlainString()
+                        + ", comisión PEN " + importes.comision().toPlainString()
+                        + ", acreditado PEN "
+                        + importes.montoAcreditado().toPlainString() + ".";
+                String sqlMovimiento = """
+                    INSERT INTO dbo.MovimientoSaldo
+                        (id_cuenta, id_recarga, tipo, monto,
+                         saldo_anterior, saldo_posterior, descripcion)
+                    VALUES (?, ?, 'RECARGA', ?, ?, ?, ?)
+                    """;
+                try (PreparedStatement ps =
+                             conexion.prepareStatement(sqlMovimiento)) {
                     ps.setLong(1, idCuenta);
                     ps.setLong(2, idRecarga);
-                    ps.setBigDecimal(3, importeNeto);
+                    ps.setBigDecimal(3, importes.montoAcreditado());
                     ps.setBigDecimal(4, saldoAnterior);
                     ps.setBigDecimal(5, saldoNuevo);
                     ps.setString(6, descripcion);
-                    ps.executeUpdate();
+                    if (ps.executeUpdate() != 1) {
+                        throw new SQLException(
+                                "No se pudo registrar el movimiento de saldo."
+                        );
+                    }
                 }
 
-                cn.commit();
-                return saldoNuevo.doubleValue();
-
+                conexion.commit();
+                return saldoNuevo;
             } catch (SQLException | RuntimeException ex) {
-                if (cn != null) {
-                    try {
-                        cn.rollback();
-                    } catch (SQLException rollbackEx) {
-                        ex.addSuppressed(rollbackEx);
-                    }
+                try {
+                    conexion.rollback();
+                } catch (SQLException errorRollback) {
+                    ex.addSuppressed(errorRollback);
                 }
                 throw ex;
-
-            } finally {
-                if (cn != null) {
-                    try {
-                        cn.setAutoCommit(true);
-                        cn.close();
-                    } catch (SQLException ex) {
-                        // No ocultar el resultado de la transacción.
-                    }
-                }
             }
         }
+    }
+
+    private BigDecimal buscarRecargaExistente(
+            Connection conexion,
+            long idCliente,
+            String metodo,
+            Importes importes,
+            String referencia
+    ) throws SQLException {
+        String sql = """
+            SELECT r.id_cuenta, c.id_cliente, r.metodo, r.monto,
+                   r.monto_comision, r.monto_acreditado, r.es_simulada,
+                   r.estado, c.saldo, m.id_movimiento
+            FROM dbo.Recarga AS r
+                WITH (UPDLOCK, HOLDLOCK, INDEX(UX_Recarga_Referencia))
+            INNER JOIN dbo.Cuenta AS c ON c.id_cuenta = r.id_cuenta
+            LEFT JOIN dbo.MovimientoSaldo AS m
+                ON m.id_recarga = r.id_recarga
+            WHERE r.referencia = ?
+            """;
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, referencia);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+
+                boolean mismaOperacion =
+                        rs.getLong("id_cliente") == idCliente
+                        && metodo.equalsIgnoreCase(rs.getString("metodo"))
+                        && importes.montoBruto().compareTo(
+                                rs.getBigDecimal("monto")) == 0
+                        && importes.comision().compareTo(
+                                rs.getBigDecimal("monto_comision")) == 0
+                        && importes.montoAcreditado().compareTo(
+                                rs.getBigDecimal("monto_acreditado")) == 0
+                        && rs.getBoolean("es_simulada")
+                        && "CONFIRMADA".equalsIgnoreCase(
+                                rs.getString("estado"));
+                long idMovimiento = rs.getLong("id_movimiento");
+                boolean tieneMovimiento = !rs.wasNull();
+                BigDecimal saldoActual = rs.getBigDecimal("saldo");
+
+                if (rs.next()) {
+                    throw new SQLException(
+                            "La clave de idempotencia tiene registros "
+                            + "financieros inconsistentes."
+                    );
+                }
+                if (!mismaOperacion || !tieneMovimiento) {
+                    throw new SQLException(
+                            "La clave de idempotencia ya se utilizó para "
+                            + "otra operación o tiene un registro incompleto."
+                    );
+                }
+                if (idMovimiento <= 0 || saldoActual == null) {
+                    throw new SQLException(
+                            "La recarga repetida no tiene un saldo válido."
+                    );
+                }
+
+                return saldoActual;
+            }
+        }
+    }
 
 
 

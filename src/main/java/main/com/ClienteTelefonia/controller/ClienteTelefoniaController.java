@@ -1,19 +1,45 @@
 
 package main.com.ClienteTelefonia.controller;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.util.UUID;
 
 import main.com.ClienteTelefonia.dao.ClienteDAO;
 import main.com.ClienteTelefonia.model.ClienteTelefonia;
+import main.com.ClienteTelefonia.server.security.AuthSessionService;
+import main.com.ClienteTelefonia.server.security.Rol;
 
 public class ClienteTelefoniaController {
 
     private ClienteTelefonia clienteActual;
     private final ClienteDAO clienteDAO;
+    private final long idClienteAutenticado;
+    private final String rolAutenticado;
+    private volatile String tokenSesion;
 
     public ClienteTelefoniaController() {
         this.clienteActual = null;
         this.clienteDAO = new ClienteDAO();
+        this.idClienteAutenticado = 0;
+        this.rolAutenticado = null;
+    }
+
+    public ClienteTelefoniaController(
+            long idClienteAutenticado,
+            String rolAutenticado
+    ) {
+        if (idClienteAutenticado <= 0) {
+            throw new IllegalArgumentException(
+                    "El usuario autenticado no tiene un cliente válido."
+            );
+        }
+
+        Rol.desde(rolAutenticado);
+        this.clienteActual = null;
+        this.clienteDAO = new ClienteDAO();
+        this.idClienteAutenticado = idClienteAutenticado;
+        this.rolAutenticado = rolAutenticado;
     }
 
     // SE ACTUALIZ PARA crea un cliente solo en memoria.
@@ -105,6 +131,27 @@ public class ClienteTelefoniaController {
     public boolean existeCliente() {
         return clienteActual != null;
     }
+
+    public void establecerTokenSesion(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El token de sesión no puede estar vacío."
+            );
+        }
+        tokenSesion = token;
+    }
+
+    public String obtenerTokenSesion() {
+        return tokenSesion;
+    }
+
+    public void cerrarSesion() throws SQLException {
+        String token = tokenSesion;
+        if (token != null) {
+            new AuthSessionService().cerrarSesion(token);
+            tokenSesion = null;
+        }
+    }
     
     //metodo para realizar recarga, si exite el cliente
     public void realizarRecarga(int tipo, double monto) {
@@ -149,6 +196,13 @@ public class ClienteTelefoniaController {
             );
         }
 
+        if (Rol.CLIENTE.name().equalsIgnoreCase(rolAutenticado)
+                && idCliente != idClienteAutenticado) {
+            throw new IllegalArgumentException(
+                    "Un cliente solo puede seleccionar su propia cuenta."
+            );
+        }
+
         ClienteTelefonia clienteSeleccionado =
             clienteDAO.buscarPorId(idCliente);
 
@@ -171,29 +225,32 @@ public class ClienteTelefoniaController {
 
     //metodo nuevo: para registrrar recargas por YAPE
     public double registrarRecargaYape(double monto) throws SQLException {
-        if (!existeCliente()) {
-            throw new IllegalStateException(
-                "Primero debe seleccionar un cliente."
-            );
-        }
-
         if (!Double.isFinite(monto) || monto <= 0) {
             throw new IllegalArgumentException(
-                "El monto debe ser mayor que cero."
+                    "El monto debe ser mayor que cero."
             );
         }
+        return registrarRecargaYape(
+                BigDecimal.valueOf(monto),
+                UUID.randomUUID()
+        ).doubleValue();
+    }
 
-        long idCliente = clienteActual.getIdCliente();
+    public BigDecimal registrarRecargaYape(
+            BigDecimal monto,
+            UUID claveIdempotencia
+    ) throws SQLException {
+        validarAccesoRecarga();
 
-        double nuevoSaldo =
-            clienteDAO.registrarRecargaYape(idCliente, monto);
+        BigDecimal nuevoSaldo = clienteDAO.registrarRecargaYape(
+                clienteActual.getIdCliente(),
+                monto,
+                claveIdempotencia
+        );
 
-        // Actualizar el objeto solo después del commit en SQL Server.
-        clienteActual.setSaldoFinal(nuevoSaldo);
-
-        // En el modelo actual no existe un contador exclusivo para Yape.
+        clienteActual.setSaldoFinal(nuevoSaldo.doubleValue());
         clienteActual.setRecargasEfectivo(
-            clienteActual.getRecargasEfectivo() + 1
+                clienteActual.getRecargasEfectivo() + 1
         );
 
         return nuevoSaldo;
@@ -201,29 +258,56 @@ public class ClienteTelefoniaController {
 
     //metodo nuevo: para registrar recargas por tarjeta
     public double registrarRecargaTarjeta(double monto) throws SQLException {
+        if (!Double.isFinite(monto) || monto <= 0) {
+            throw new IllegalArgumentException(
+                    "El monto debe ser mayor que cero."
+            );
+        }
+        return registrarRecargaTarjeta(
+                BigDecimal.valueOf(monto),
+                UUID.randomUUID()
+        ).doubleValue();
+    }
+
+    public BigDecimal registrarRecargaTarjeta(
+            BigDecimal monto,
+            UUID claveIdempotencia
+    ) throws SQLException {
+        validarAccesoRecarga();
+
+        BigDecimal nuevoSaldo = clienteDAO.registrarRecargaTarjeta(
+                clienteActual.getIdCliente(),
+                monto,
+                claveIdempotencia
+        );
+
+        clienteActual.setSaldoFinal(nuevoSaldo.doubleValue());
+        clienteActual.setRecargasTarjeta(
+                clienteActual.getRecargasTarjeta() + 1
+        );
+
+        return nuevoSaldo;
+    }
+
+    private void validarAccesoRecarga() {
         if (!existeCliente()) {
             throw new IllegalStateException(
                 "Primero debe seleccionar un cliente."
             );
         }
-
-        if (!Double.isFinite(monto) || monto <= 0) {
-            throw new IllegalArgumentException(
-                "El monto debe ser mayor que cero."
+        if (idClienteAutenticado <= 0 || rolAutenticado == null) {
+            throw new IllegalStateException(
+                    "Se requiere una sesión autenticada para recargar."
             );
         }
 
-        double nuevoSaldo = clienteDAO.registrarRecargaTarjeta(
-            clienteActual.getIdCliente(),
-            monto
-        );
-
-        clienteActual.setSaldoFinal(nuevoSaldo);
-        clienteActual.setRecargasTarjeta(
-            clienteActual.getRecargasTarjeta() + 1
-        );
-
-        return nuevoSaldo;
+        Rol rol = Rol.desde(rolAutenticado);
+        if (rol == Rol.CLIENTE
+                && clienteActual.getIdCliente() != idClienteAutenticado) {
+            throw new IllegalStateException(
+                    "Un cliente solo puede recargar su propia cuenta."
+            );
+        }
     }
 
 

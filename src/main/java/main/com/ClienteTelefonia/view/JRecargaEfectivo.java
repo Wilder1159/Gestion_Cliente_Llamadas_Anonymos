@@ -3,15 +3,19 @@ package main.com.ClienteTelefonia.view;
 
 import main.com.ClienteTelefonia.controller.ClienteTelefoniaController;
 import javax.swing.JOptionPane;
-import javax.swing.ImageIcon;
-import java.awt.Image;
+import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.util.UUID;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import main.com.ClienteTelefonia.model.ClienteTelefonia;
+import main.com.ClienteTelefonia.service.CalculoRecargaSimulada;
 
 public class JRecargaEfectivo extends javax.swing.JFrame {
 
     private ClienteTelefoniaController controller;
+    private UUID claveIdempotencia = UUID.randomUUID();
    
     public JRecargaEfectivo(ClienteTelefoniaController controller) {
         initComponents();
@@ -23,31 +27,28 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
             txtCliente.setText(cliente.getNombre());
             txtCliente.setEditable(false);
         }
-    }   
+        txtMonto.getDocument().addDocumentListener(new DocumentListener() {
+            private void cambioImporte() {
+                claveIdempotencia = UUID.randomUUID();
+            }
 
-    //para mostrar y llamar al código QR de mi Yape
-    private void mostrarQR() {
-        java.net.URL ruta = getClass().getResource("/main/com/ClienteTelefonia/images/Yape.png");
-        
-        if (ruta == null) {
-            JOptionPane.showMessageDialog(this, "No se encontro el QR del Yape");
-            return;
-        }
-        
-        ImageIcon icono = new ImageIcon(ruta);
-        int ancho = lblQR.getWidth();
-        int alto = lblQR.getWidth();
-        
-        int lado = Math.min(ancho, alto);
-        if (lado <= 0) {
-            lado = 200;
-        }
-        
-        Image imagen = icono.getImage().getScaledInstance(lado, lado, Image.SCALE_SMOOTH);
-        lblQR.setIcon(new ImageIcon(imagen));
-        lblQR.setText("");
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                cambioImporte();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                cambioImporte();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                cambioImporte();
+            }
+        });
     }
-    
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -66,14 +67,14 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
 
         lblRecarga.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         lblRecarga.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        lblRecarga.setText("RECARGA EN EFECTIVO");
+        lblRecarga.setText("RECARGA YAPE SIMULADA");
         lblRecarga.setVerticalAlignment(javax.swing.SwingConstants.TOP);
 
         jLabel1.setText("CLIENTE");
 
-        jLabel2.setText("MONTO DE RECARGA");
+        jLabel2.setText("MONTO DE RECARGA (PEN)");
 
-        btnGenerarQR.setText("Generar Código QR");
+        btnGenerarQR.setText("GENERAR CODIGO QR");
         btnGenerarQR.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnGenerarQRActionPerformed(evt);
@@ -102,25 +103,26 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(19, 19, 19)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(lblRecarga, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addComponent(btnGenerarQR, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                .addComponent(lblRecarga, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(txtCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addComponent(txtMonto, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(44, 44, 44)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lblQR, javax.swing.GroupLayout.PREFERRED_SIZE, 189, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtCliente))
+                                .addComponent(txtMonto, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 108, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(btnRecargar, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                .addContainerGap(30, Short.MAX_VALUE))
+                                .addGap(42, 42, 42)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(btnGenerarQR, javax.swing.GroupLayout.DEFAULT_SIZE, 214, Short.MAX_VALUE)
+                                    .addComponent(lblQR, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(72, 72, 72)
+                        .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 108, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnRecargar, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(79, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -139,7 +141,7 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
                 .addComponent(btnGenerarQR)
                 .addGap(18, 18, 18)
                 .addComponent(lblQR, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 26, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnVolver, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnRecargar, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -150,24 +152,24 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnGenerarQRActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarQRActionPerformed
-        //CONECTARLO CON EL QR DE NUESTRO YAPE
         try {
-            double monto = Double.parseDouble(txtMonto.getText().trim());
-            
-            if (!Double.isFinite(monto) || monto <= 0) {
-                JOptionPane.showMessageDialog(this, "Ingrese un monto valido");
-                return;
-            }
-            
-            //se llama al metodo del QR
-            mostrarQR();
-            javax.swing.JOptionPane.showMessageDialog(this, "Monto a pagar: S/ " + monto + 
-                    "\nEscanee el código QR.");
-            
-            
-            //se realiza las excepciones
+            BigDecimal monto = new BigDecimal(txtMonto.getText().trim());
+            CalculoRecargaSimulada.yape(monto);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Esta es una simulación académica. "
+                    + "No realice ni verifique una transferencia real."
+                    + "\nImporte simulado: PEN "
+                    + monto.setScale(2, java.math.RoundingMode.HALF_UP)
+                            .toPlainString()
+            );
         } catch (NumberFormatException ex) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Debe de ingresar un monto valido mayor que cero.");
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Ingrese un importe numérico válido."
+            );
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }//GEN-LAST:event_btnGenerarQRActionPerformed
 
@@ -179,7 +181,7 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
     }//GEN-LAST:event_btnVolverActionPerformed
 
     private void btnRecargarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRecargarActionPerformed
-        // btn de recarga
+        btnRecargar.setEnabled(false);
         try {
                 if (!controller.existeCliente()) {
                     JOptionPane.showMessageDialog(
@@ -189,25 +191,20 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
                     return;
                 }
 
-                double monto = Double.parseDouble(txtMonto.getText().trim());
-
-                if (!Double.isFinite(monto) || monto <= 0) {
-                    JOptionPane.showMessageDialog(
-                        this,
-                        "Ingrese un monto mayor que cero."
-                    );
-                    return;
-                }
+                BigDecimal monto = new BigDecimal(txtMonto.getText().trim());
+                var importes = CalculoRecargaSimulada.yape(monto);
 
                 int confirmar = JOptionPane.showConfirmDialog(
                     this,
-                    "Cliente: " + controller.obtenerNombre()
-                        + "\nMonto: S/ " + String.format("%.2f", monto)
-                        + "\nComisión: S/ 0.00"
-                        + "\nSaldo que se acreditará: S/ "
-                        + String.format("%.2f", monto)
-                        + "\n\n¿Verificó el pago en Yape?",
-                    "Confirmar pago de Yape",
+                    "SIMULACIÓN ACADÉMICA — no se realiza ni verifica "
+                        + "ningún pago real."
+                        + "\nCliente: " + controller.obtenerNombre()
+                        + "\nImporte: PEN " + importes.montoBruto()
+                        + "\nComisión: PEN " + importes.comision()
+                        + "\nImporte acreditado: PEN "
+                        + importes.montoAcreditado()
+                        + "\n\n¿Registrar la simulación?",
+                    "Confirmar recarga Yape simulada",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE
                 );
@@ -220,17 +217,21 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
                     return;
                 }
 
-                double nuevoSaldo = controller.registrarRecargaYape(monto);
+                BigDecimal nuevoSaldo = controller.registrarRecargaYape(
+                        monto,
+                        claveIdempotencia
+                );
 
                 JOptionPane.showMessageDialog(
                     this,
                     "¡RECARGA REGISTRADA CORRECTAMENTE!"
-                        + "\nMétodo: Yape"
-                        + "\nEstado: CONFIRMADA MANUALMENTE"
-                        + "\nMonto: S/ " + String.format("%.2f", monto)
-                        + "\nComisión: S/ 0.00"
-                        + "\nSaldo actual: S/ "
-                        + String.format("%.2f", nuevoSaldo)
+                        + "\nMétodo: Yape simulado"
+                        + "\nEstado: SIMULADA"
+                        + "\nImporte: PEN " + importes.montoBruto()
+                        + "\nComisión: PEN " + importes.comision()
+                        + "\nImporte acreditado: PEN "
+                        + importes.montoAcreditado()
+                        + "\nSaldo actual: PEN " + nuevoSaldo
                 );
 
                 MenuOpciones menu = new MenuOpciones(controller);
@@ -254,6 +255,9 @@ public class JRecargaEfectivo extends javax.swing.JFrame {
                     JOptionPane.ERROR_MESSAGE
                 );
             }
+        finally {
+            btnRecargar.setEnabled(true);
+        }
     }//GEN-LAST:event_btnRecargarActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

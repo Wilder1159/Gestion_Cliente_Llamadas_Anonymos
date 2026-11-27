@@ -23,51 +23,35 @@
   <Layout>
     <DimensionLayout dim="0">
       <Group type="103" groupAlignment="0" attributes="0">
-          <Group type="102" alignment="0" attributes="0">
-              <EmptySpace min="-2" pref="26" max="-2" attributes="0"/>
+          <Group type="102" attributes="0">
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="lblNumeroTarjeta" alignment="0" min="-2" pref="132" max="-2" attributes="0"/>
-                  <Component id="txtNumeroTar" alignment="0" min="-2" pref="150" max="-2" attributes="0"/>
-                  <Group type="102" alignment="0" attributes="0">
-                      <Component id="lblCliente" min="-2" pref="77" max="-2" attributes="0"/>
-                      <EmptySpace max="-2" attributes="0"/>
-                      <Component id="txtCliente" min="-2" pref="121" max="-2" attributes="0"/>
-                  </Group>
-                  <Group type="102" alignment="0" attributes="0">
-                      <Component id="lblVencimiento" min="-2" pref="91" max="-2" attributes="0"/>
-                      <EmptySpace type="unrelated" max="-2" attributes="0"/>
-                      <Component id="lblCVV" min="-2" pref="53" max="-2" attributes="0"/>
-                  </Group>
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace min="-2" pref="26" max="-2" attributes="0"/>
-                      <Component id="btnVolver" min="-2" pref="88" max="-2" attributes="0"/>
-                      <EmptySpace max="-2" attributes="0"/>
-                      <Component id="btnRecarga" min="-2" pref="95" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="0" attributes="0">
+                          <Group type="102" alignment="0" attributes="0">
+                              <Component id="lblCliente" min="-2" pref="77" max="-2" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Component id="txtCliente" min="-2" pref="180" max="-2" attributes="0"/>
+                          </Group>
+                          <Group type="102" alignment="0" attributes="0">
+                              <EmptySpace min="-2" pref="95" max="-2" attributes="0"/>
+                              <Component id="btnVolver" min="-2" pref="88" max="-2" attributes="0"/>
+                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                              <Component id="btnRecarga" min="-2" pref="110" max="-2" attributes="0"/>
+                          </Group>
+                          <Group type="102" alignment="0" attributes="0">
+                              <Component id="lblMonto" min="-2" pref="97" max="-2" attributes="0"/>
+                              <EmptySpace type="separate" max="-2" attributes="0"/>
+                              <Component id="txtMonto" min="-2" pref="100" max="-2" attributes="0"/>
+                          </Group>
+                      </Group>
                   </Group>
                   <Group type="102" alignment="0" attributes="0">
-                      <Component id="lblTipo" min="-2" pref="108" max="-2" attributes="0"/>
-                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                      <Component id="txtNumeroTarjeta" min="-2" pref="106" max="-2" attributes="0"/>
-                  </Group>
-                  <Group type="103" alignment="0" groupAlignment="1" max="-2" attributes="0">
-                      <Group type="102" alignment="0" attributes="0">
-                          <Component id="txtVencimiento" min="-2" pref="83" max="-2" attributes="0"/>
-                          <EmptySpace type="separate" max="-2" attributes="0"/>
-                          <Component id="txtCVV" max="32767" attributes="0"/>
-                      </Group>
-                      <Group type="102" alignment="0" attributes="0">
-                          <Component id="lblMonto" min="-2" pref="55" max="-2" attributes="0"/>
-                          <EmptySpace type="separate" max="-2" attributes="0"/>
-                          <Component id="txtMonto" min="-2" pref="100" max="-2" attributes="0"/>
-                      </Group>
+                      <EmptySpace min="-2" pref="90" max="-2" attributes="0"/>
+                      <Component id="lblTitulo" min="-2" pref="260" max="-2" attributes="0"/>
                   </Group>
               </Group>
-              <EmptySpace min="0" pref="45" max="32767" attributes="0"/>
-          </Group>
-          <Group type="102" alignment="1" attributes="0">
-              <EmptySpace max="32767" attributes="0"/>
-              <Component id="lblTitulo" min="-2" pref="185" max="-2" attributes="0"/>
-              <EmptySpace min="-2" pref="40" max="-2" attributes="0"/>
+              <EmptySpace min="0" pref="105" max="32767" attributes="0"/>
           </Group>
       </Group>
     </DimensionLayout>
@@ -81,36 +65,17 @@
                   <Component id="lblCliente" alignment="3" min="-2" pref="35" max="-2" attributes="0"/>
                   <Component id="txtCliente" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
-              <EmptySpace type="separate" max="-2" attributes="0"/>
-              <Group type="103" groupAlignment="3" attributes="0">
-                  <Component id="lblTipo" alignment="3" min="-2" pref="30" max="-2" attributes="0"/>
-                  <Component id="txtNumeroTarjeta" alignment="3" min="-2" max="-2" attributes="0"/>
-              </Group>
-              <EmptySpace type="separate" max="-2" attributes="0"/>
-              <Component id="lblNumeroTarjeta" min="-2" pref="33" max="-2" attributes="0"/>
-              <EmptySpace max="-2" attributes="0"/>
-              <Component id="txtNumeroTar" min="-2" max="-2" attributes="0"/>
-              <EmptySpace max="-2" attributes="0"/>
-              <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="lblCVV" min="-2" pref="38" max="-2" attributes="0"/>
-                  <Component id="lblVencimiento" alignment="1" min="-2" pref="38" max="-2" attributes="0"/>
-              </Group>
-              <EmptySpace max="-2" attributes="0"/>
-              <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="txtVencimiento" min="-2" max="-2" attributes="0"/>
-                  <Component id="txtCVV" alignment="0" min="-2" max="-2" attributes="0"/>
-              </Group>
-              <EmptySpace min="-2" pref="35" max="-2" attributes="0"/>
+              <EmptySpace pref="212" max="32767" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
                   <Component id="lblMonto" alignment="3" min="-2" pref="31" max="-2" attributes="0"/>
                   <Component id="txtMonto" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
-              <EmptySpace type="separate" max="-2" attributes="0"/>
+              <EmptySpace min="-2" pref="15" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
                   <Component id="btnRecarga" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
                   <Component id="btnVolver" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
               </Group>
-              <EmptySpace pref="48" max="32767" attributes="0"/>
+              <EmptySpace min="-2" pref="42" max="-2" attributes="0"/>
           </Group>
       </Group>
     </DimensionLayout>
@@ -121,29 +86,9 @@
         <Property name="text" type="java.lang.String" value="CLIENTE"/>
       </Properties>
     </Component>
-    <Component class="javax.swing.JLabel" name="lblTipo">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="TIPO DE TARJETA"/>
-      </Properties>
-    </Component>
-    <Component class="javax.swing.JLabel" name="lblNumeroTarjeta">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="N&#xda;MERO DE TARJETA"/>
-      </Properties>
-    </Component>
-    <Component class="javax.swing.JLabel" name="lblVencimiento">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="VENCIMIENTO"/>
-      </Properties>
-    </Component>
-    <Component class="javax.swing.JLabel" name="lblCVV">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="CVV"/>
-      </Properties>
-    </Component>
     <Component class="javax.swing.JLabel" name="lblMonto">
       <Properties>
-        <Property name="text" type="java.lang.String" value="MONTO"/>
+        <Property name="text" type="java.lang.String" value="MONTO (PEN)"/>
       </Properties>
     </Component>
     <Component class="javax.swing.JLabel" name="lblTitulo">
@@ -152,30 +97,10 @@
           <Font name="Arial" size="14" style="1"/>
         </Property>
         <Property name="horizontalAlignment" type="int" value="0"/>
-        <Property name="text" type="java.lang.String" value="RECARGA CON TAJETA"/>
+        <Property name="text" type="java.lang.String" value="RECARGA CON TARJETA SIMULADA"/>
       </Properties>
-    </Component>
-    <Component class="javax.swing.JComboBox" name="txtNumeroTarjeta">
-      <Properties>
-        <Property name="model" type="javax.swing.ComboBoxModel" editor="org.netbeans.modules.form.editors2.ComboBoxModelEditor">
-          <StringArray count="3">
-            <StringItem index="0" value=""/>
-            <StringItem index="1" value="D&#xc9;BITO"/>
-            <StringItem index="2" value="CR&#xc9;DITO"/>
-          </StringArray>
-        </Property>
-      </Properties>
-      <AuxValues>
-        <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
-      </AuxValues>
     </Component>
     <Component class="javax.swing.JTextField" name="txtCliente">
-    </Component>
-    <Component class="javax.swing.JTextField" name="txtNumeroTar">
-    </Component>
-    <Component class="javax.swing.JTextField" name="txtVencimiento">
-    </Component>
-    <Component class="javax.swing.JTextField" name="txtCVV">
     </Component>
     <Component class="javax.swing.JTextField" name="txtMonto">
     </Component>

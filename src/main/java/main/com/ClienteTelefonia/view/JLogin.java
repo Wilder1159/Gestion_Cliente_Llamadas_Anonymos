@@ -8,6 +8,7 @@ import javax.swing.JOptionPane;
 
 import main.com.ClienteTelefonia.controller.ClienteTelefoniaController;
 import main.com.ClienteTelefonia.controller.LoginController;
+import main.com.ClienteTelefonia.server.security.AuthSessionService;
 import main.com.ClienteTelefonia.controller.RegistroController;
 import main.com.ClienteTelefonia.dao.RegistroDAO;
 import main.com.ClienteTelefonia.model.Usuario;
@@ -149,10 +150,19 @@ public class JLogin extends javax.swing.JFrame {
             );
 
             // 2. Crear el controlador del cliente
-            ClienteTelefoniaController clienteController = new ClienteTelefoniaController();
+            ClienteTelefoniaController clienteController =
+                new ClienteTelefoniaController(
+                    usuario.getIdCliente(),
+                    usuario.getRol()
+                );
 
             // 3. Recuperar el cliente asociado a la cuenta
             clienteController.seleccionarCliente(usuario.getIdCliente()
+            );
+            clienteController.establecerTokenSesion(
+                    new AuthSessionService().crearSesion(
+                            usuario.getIdUsuario()
+                    )
             );
 
             // 4. Abrir el menú según su rol
